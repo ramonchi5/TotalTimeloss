@@ -14,7 +14,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace TotalTimeloss.UI.Components;
 
-[GlobalFontConsumer(GlobalFont.TimesFont | GlobalFont.TextFont)]
+//[GlobalFontConsumer(GlobalFont.TimesFont | GlobalFont.TextFont)]
 public class TotalTimeloss : IComponent
 {
     protected LiveSplitState CurrentState { get; set; }
