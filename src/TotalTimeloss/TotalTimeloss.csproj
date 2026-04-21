@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup> 
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <Nullable>enable</Nullable>
+    <Title>TotalTimeloss</Title>
+    <Authors>Ramonchi</Authors>
+    <RepositoryUrl>https://github.com/ramonchi5/TotalTimeloss</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>../../README.md</PackageReadmeFile>
+    <PackageLicenseFile>../../LICENSE</PackageLicenseFile>
+    <Copyright>(c) 2026 by Ramonchi, MIT licensed</Copyright>
+    <Description></Description>
+    <IncludeSymbols>False</IncludeSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="LiveSplit.Core">
+      <Private>false</Private>
+      <HintPath>..\..\packages\LiveSplit.Core.dll</HintPath>
+    </Reference>    
+    <Reference Include="UpdateManager">
+      <Private>false</Private>
+      <HintPath>..\..\packages\UpdateManager.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+</Project>

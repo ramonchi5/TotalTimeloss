@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11709.299 stable
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5E0E308C-B8D5-419B-B1E6-8648A03D6D64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TotalTimeloss", "src\TotalTimeloss\TotalTimeloss.csproj", "{40CCD498-C892-51CC-04D6-16DA332A90CD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{40CCD498-C892-51CC-04D6-16DA332A90CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40CCD498-C892-51CC-04D6-16DA332A90CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40CCD498-C892-51CC-04D6-16DA332A90CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40CCD498-C892-51CC-04D6-16DA332A90CD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{40CCD498-C892-51CC-04D6-16DA332A90CD} = {5E0E308C-B8D5-419B-B1E6-8648A03D6D64}
+	EndGlobalSection
+EndGlobal
