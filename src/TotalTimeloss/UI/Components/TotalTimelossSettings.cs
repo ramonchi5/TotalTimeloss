@@ -36,6 +36,10 @@ public partial class TotalTimelossSettings : UserControl
     public int Label3XOffset { get; set; }
     public int InnerRowGap { get; set; }
     public bool UnderlineLabels { get; set; }
+    public bool UnderlineLabelSpaces { get; set; }
+    public bool ShowTime1 { get; set; }
+    public bool ShowTime2 { get; set; }
+    public bool ShowTime3 { get; set; }
 
     public Color BackgroundColor { get; set; }
     public Color BackgroundColor2 { get; set; }
@@ -63,25 +67,32 @@ public partial class TotalTimelossSettings : UserControl
         }
     }
 
+    private Panel _scrollPanel = null!;
+    private Panel _contentPanel = null!;
+    private bool _resetScrollPosition;
+    private CheckBox _showLabelsCheck = null!;
+    private CheckBox _underlineLabelsCheck = null!;
+    private CheckBox _underlineSpacesCheck = null!;
+    private CheckBox _overrideLabelColorsCheck = null!;
+    private CheckBox _overrideTimeColorsCheck = null!;
     private TextBox _label1Box = null!;
     private TextBox _label2Box = null!;
     private TextBox _label3Box = null!;
-    private CheckBox _showLabelsCheck = null!;
-    private CheckBox _underlineLabelsCheck = null!;
-    private CheckBox _overrideLabelColorsCheck = null!;
-    private CheckBox _overrideTimeColorsCheck = null!;
     private Button _label1ColorButton = null!;
     private Button _label2ColorButton = null!;
     private Button _label3ColorButton = null!;
+    private NumericUpDown _label1OffsetBox = null!;
+    private NumericUpDown _label2OffsetBox = null!;
+    private NumericUpDown _label3OffsetBox = null!;
+    private CheckBox _showTime1Check = null!;
+    private CheckBox _showTime2Check = null!;
+    private CheckBox _showTime3Check = null!;
     private Button _time1ColorButton = null!;
     private Button _time2ColorButton = null!;
     private Button _time3ColorButton = null!;
     private NumericUpDown _sobOffsetBox = null!;
-    private NumericUpDown _bptOffsetBox = null!;
     private NumericUpDown _middleOffsetBox = null!;
-    private NumericUpDown _label1OffsetBox = null!;
-    private NumericUpDown _label2OffsetBox = null!;
-    private NumericUpDown _label3OffsetBox = null!;
+    private NumericUpDown _bptOffsetBox = null!;
     private NumericUpDown _innerGapBox = null!;
     private RadioButton _secondsRadio = null!;
     private RadioButton _tenthsRadio = null!;
@@ -118,6 +129,10 @@ public partial class TotalTimelossSettings : UserControl
         Label3XOffset = 0;
         InnerRowGap = 0;
         UnderlineLabels = false;
+        UnderlineLabelSpaces = false;
+        ShowTime1 = true;
+        ShowTime2 = true;
+        ShowTime3 = true;
 
         BackgroundColor = Color.Transparent;
         BackgroundColor2 = Color.Transparent;
@@ -134,159 +149,139 @@ public partial class TotalTimelossSettings : UserControl
         Controls.Clear();
 
         AutoScaleMode = AutoScaleMode.Font;
-        AutoScroll = true;
-        Padding = new Padding(7);
-        Size = new Size(476, 520);
+        AutoScroll = false;
+        Dock = DockStyle.Fill;
+        Padding = Padding.Empty;
+        Size = new Size(476, 640);
 
-        var flow = new FlowLayoutPanel
+        _scrollPanel = new Panel
         {
             AutoScroll = true,
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false
+            Margin = Padding.Empty,
+            Padding = new Padding(7)
         };
 
-        flow.Controls.Add(MakeSection("Labels", BuildLabelsSection()));
-        flow.Controls.Add(MakeSection("Label Colors", BuildLabelColorsSection()));
-        flow.Controls.Add(MakeSection("Time Colors", BuildTimeColorsSection()));
-        flow.Controls.Add(MakeSection("Layout / Spacing", BuildLayoutSection()));
-        flow.Controls.Add(MakeSection("Accuracy", BuildAccuracySection()));
-        flow.Controls.Add(MakeSection("Background", BuildBackgroundSection()));
+        _contentPanel = new Panel
+        {
+            Location = new Point(0, 0),
+            Margin = Padding.Empty,
+            AutoSize = false,
+            Padding = Padding.Empty
+        };
 
-        Controls.Add(flow);
+        _scrollPanel.Controls.Add(_contentPanel);
+        Controls.Add(_scrollPanel);
+
+        AddSettingsSection(MakeSection("Background", BuildBackgroundSection()));
+        AddSettingsSection(MakeSection("Accuracy", BuildAccuracySection()));
+        AddSettingsSection(MakeSection("Options", BuildOptionsSection()));
+        AddSettingsSection(MakeSection("Labels", BuildLabelsSection()));
+        AddSettingsSection(MakeSection("Times", BuildTimesSection()));
+
+        Resize += (sender, args) => ResizeSections();
+        _scrollPanel.Resize += (sender, args) => ResizeSections();
+        _resetScrollPosition = true;
+        ResizeSections();
         ResumeLayout(false);
+        PerformLayout();
     }
 
-    private Control BuildLabelsSection()
+    protected override void OnParentChanged(EventArgs e)
     {
-        var table = MakeGrid(5);
+        base.OnParentChanged(e);
 
-        _showLabelsCheck = new CheckBox { Text = "Show Labels", AutoSize = true };
-        _showLabelsCheck.CheckedChanged += (sender, args) => Display2Rows = _showLabelsCheck.Checked;
-        AddSpanningControl(table, _showLabelsCheck, 0);
-
-        table.Controls.Add(MakeLabel("Label 1 Text:"), 0, 1);
-        _label1Box = MakeTextBox(Label1Text, 80);
-        _label1Box.TextChanged += (sender, args) => Label1Text = _label1Box.Text;
-        table.Controls.Add(_label1Box, 1, 1);
-
-        table.Controls.Add(MakeLabel("Label 2 Text:"), 0, 2);
-        _label2Box = MakeTextBox(Label2Text, 80);
-        _label2Box.TextChanged += (sender, args) => Label2Text = _label2Box.Text;
-        table.Controls.Add(_label2Box, 1, 2);
-
-        table.Controls.Add(MakeLabel("Label 3 Text:"), 0, 3);
-        _label3Box = MakeTextBox(Label3Text, 80);
-        _label3Box.TextChanged += (sender, args) => Label3Text = _label3Box.Text;
-        table.Controls.Add(_label3Box, 1, 3);
-
-        _underlineLabelsCheck = new CheckBox { Text = "Underline Labels", AutoSize = true };
-        _underlineLabelsCheck.CheckedChanged += (sender, args) => UnderlineLabels = _underlineLabelsCheck.Checked;
-        AddSpanningControl(table, _underlineLabelsCheck, 4);
-
-        return table;
+        if (Parent != null)
+            QueueScrollReset();
     }
 
-    private Control BuildLabelColorsSection()
+    protected override void OnVisibleChanged(EventArgs e)
     {
-        var table = MakeGrid(7);
+        base.OnVisibleChanged(e);
 
-        _overrideLabelColorsCheck = new CheckBox { Text = "Override Layout Settings", AutoSize = true };
-        _overrideLabelColorsCheck.CheckedChanged += (sender, args) =>
+        if (Visible)
+            QueueScrollReset();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+
+        if (Visible)
+            QueueScrollReset();
+    }
+
+    public void PrepareForDisplay()
+    {
+        QueueScrollReset();
+    }
+
+    private void QueueScrollReset()
+    {
+        _resetScrollPosition = true;
+
+        if (!IsHandleCreated || IsDisposed)
+            return;
+
+        BeginInvoke(new Action(() =>
         {
-            OverrideTextColor = _overrideLabelColorsCheck.Checked;
-            UpdateOverrideControlStates();
+            if (IsDisposed)
+                return;
+
+            _resetScrollPosition = true;
+            ResizeSections();
+        }));
+    }
+
+    private void AddSettingsSection(Control section)
+    {
+        section.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+        section.TabIndex = _contentPanel.Controls.Count;
+        _contentPanel.Controls.Add(section);
+    }
+
+    private Control BuildBackgroundSection()
+    {
+        var table = new TableLayoutPanel
+        {
+            AutoSize = false,
+            ColumnCount = 6,
+            RowCount = 1,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            Width = 420,
+            Height = 29
         };
-        AddSpanningControl(table, _overrideLabelColorsCheck, 0);
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
 
-        table.Controls.Add(MakeLabel("Label 1 Color:"), 0, 1);
-        _label1ColorButton = MakeColorButton(Label1Color, color =>
+        table.Controls.Add(MakeLabel("Gradient:"), 0, 0);
+        _gradientCombo = new ComboBox
         {
-            Label1Color = color;
-            TextColor = Label1Color;
-        });
-        table.Controls.Add(_label1ColorButton, 1, 1);
-
-        table.Controls.Add(MakeLabel("Label 2 Color:"), 0, 2);
-        _label2ColorButton = MakeColorButton(Label2Color, color => Label2Color = color);
-        table.Controls.Add(_label2ColorButton, 1, 2);
-
-        table.Controls.Add(MakeLabel("Label 3 Color:"), 0, 3);
-        _label3ColorButton = MakeColorButton(Label3Color, color => Label3Color = color);
-        table.Controls.Add(_label3ColorButton, 1, 3);
-
-        return table;
-    }
-
-    private Control BuildTimeColorsSection()
-    {
-        var table = MakeGrid(4);
-
-        _overrideTimeColorsCheck = new CheckBox { Text = "Override Layout Settings", AutoSize = true };
-        _overrideTimeColorsCheck.CheckedChanged += (sender, args) =>
-        {
-            OverrideTimeColor = _overrideTimeColorsCheck.Checked;
-            UpdateOverrideControlStates();
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Dock = DockStyle.Fill
         };
-        AddSpanningControl(table, _overrideTimeColorsCheck, 0);
-
-        table.Controls.Add(MakeLabel("Time 1 Color:"), 0, 1);
-        _time1ColorButton = MakeColorButton(Time1Color, color =>
+        _gradientCombo.Items.AddRange(new object[] { "Plain", "Vertical", "Horizontal" });
+        _gradientCombo.SelectedIndexChanged += (sender, args) =>
         {
-            Time1Color = color;
-            TimeColor = Time1Color;
-        });
-        table.Controls.Add(_time1ColorButton, 1, 1);
+            if (_gradientCombo.SelectedItem != null)
+                GradientString = _gradientCombo.SelectedItem.ToString();
+            UpdateBackgroundControlStates();
+        };
+        table.Controls.Add(_gradientCombo, 1, 0);
 
-        table.Controls.Add(MakeLabel("Time 2 Color:"), 0, 2);
-        _time2ColorButton = MakeColorButton(Time2Color, color => Time2Color = color);
-        table.Controls.Add(_time2ColorButton, 1, 2);
+        table.Controls.Add(MakeLabel("Color 1:"), 2, 0);
+        _backgroundColorButton = MakeColorButton(BackgroundColor, color => BackgroundColor = color);
+        table.Controls.Add(_backgroundColorButton, 3, 0);
 
-        table.Controls.Add(MakeLabel("Time 3 Color:"), 0, 3);
-        _time3ColorButton = MakeColorButton(Time3Color, color => Time3Color = color);
-        table.Controls.Add(_time3ColorButton, 1, 3);
-
-        return table;
-    }
-
-    private Control BuildLayoutSection()
-    {
-        var table = MakeGrid(4);
-
-        table.Controls.Add(MakeLabel("Move SoB Time Left (px):"), 0, 0);
-        _sobOffsetBox = MakeNumber(-500, 500, MoveSobTimeLeft);
-        _sobOffsetBox.ValueChanged += (sender, args) => MoveSobTimeLeft = (int)_sobOffsetBox.Value;
-        table.Controls.Add(_sobOffsetBox, 1, 0);
-
-        table.Controls.Add(MakeLabel("Move BPT Time Left (px):"), 0, 1);
-        _bptOffsetBox = MakeNumber(-500, 500, MoveBptTimeLeft);
-        _bptOffsetBox.ValueChanged += (sender, args) => MoveBptTimeLeft = (int)_bptOffsetBox.Value;
-        table.Controls.Add(_bptOffsetBox, 1, 1);
-
-        table.Controls.Add(MakeLabel("Move Delta Right (px):"), 0, 2);
-        _middleOffsetBox = MakeNumber(-500, 500, MiddleValueXOffset);
-        _middleOffsetBox.ValueChanged += (sender, args) => MiddleValueXOffset = (int)_middleOffsetBox.Value;
-        table.Controls.Add(_middleOffsetBox, 1, 2);
-
-        table.Controls.Add(MakeLabel("Label 1 X Offset (px):"), 0, 3);
-        _label1OffsetBox = MakeNumber(-500, 500, Label1XOffset);
-        _label1OffsetBox.ValueChanged += (sender, args) => Label1XOffset = (int)_label1OffsetBox.Value;
-        table.Controls.Add(_label1OffsetBox, 1, 3);
-
-        table.Controls.Add(MakeLabel("Label 2 X Offset (px):"), 0, 4);
-        _label2OffsetBox = MakeNumber(-500, 500, Label2XOffset);
-        _label2OffsetBox.ValueChanged += (sender, args) => Label2XOffset = (int)_label2OffsetBox.Value;
-        table.Controls.Add(_label2OffsetBox, 1, 4);
-
-        table.Controls.Add(MakeLabel("Label 3 X Offset (px):"), 0, 5);
-        _label3OffsetBox = MakeNumber(-500, 500, Label3XOffset);
-        _label3OffsetBox.ValueChanged += (sender, args) => Label3XOffset = (int)_label3OffsetBox.Value;
-        table.Controls.Add(_label3OffsetBox, 1, 5);
-
-        table.Controls.Add(MakeLabel("Label/Time Gap (px):"), 0, 6);
-        _innerGapBox = MakeNumber(-60, 60, InnerRowGap);
-        _innerGapBox.ValueChanged += (sender, args) => InnerRowGap = (int)_innerGapBox.Value;
-        table.Controls.Add(_innerGapBox, 1, 6);
+        table.Controls.Add(MakeLabel("Color 2:"), 4, 0);
+        _backgroundColor2Button = MakeColorButton(BackgroundColor2, color => BackgroundColor2 = color);
+        table.Controls.Add(_backgroundColor2Button, 5, 0);
 
         return table;
     }
@@ -296,6 +291,7 @@ public partial class TotalTimelossSettings : UserControl
         var flow = new FlowLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false
         };
@@ -314,80 +310,342 @@ public partial class TotalTimelossSettings : UserControl
         flow.Controls.Add(_tenthsRadio);
         flow.Controls.Add(_hundredthsRadio);
         flow.Controls.Add(_millisecondsRadio);
-
         return flow;
     }
 
-    private Control BuildBackgroundSection()
+    private Control BuildOptionsSection()
     {
-        var table = MakeGrid(3);
-
-        table.Controls.Add(MakeLabel("Gradient:"), 0, 0);
-        _gradientCombo = new ComboBox
+        var table = new TableLayoutPanel
         {
-            DropDownStyle = ComboBoxStyle.DropDownList,
-            Dock = DockStyle.Fill
+            AutoSize = false,
+            ColumnCount = 4,
+            RowCount = 3,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            Width = 420,
+            Height = 87
         };
-        _gradientCombo.Items.AddRange(new object[] { "Plain", "Vertical", "Horizontal" });
-        _gradientCombo.SelectedIndexChanged += (sender, args) =>
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 135f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 76f));
+        for (int i = 0; i < 3; i++)
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
+
+        _showLabelsCheck = new CheckBox { Text = "Show Labels", AutoSize = true };
+        _showLabelsCheck.CheckedChanged += (sender, args) => Display2Rows = _showLabelsCheck.Checked;
+        table.Controls.Add(_showLabelsCheck, 0, 0);
+
+        _underlineLabelsCheck = new CheckBox { Text = "Underline Labels", AutoSize = true };
+        _underlineLabelsCheck.CheckedChanged += (sender, args) => UnderlineLabels = _underlineLabelsCheck.Checked;
+        table.Controls.Add(_underlineLabelsCheck, 1, 0);
+
+        _underlineSpacesCheck = new CheckBox { Text = "Underline Spaces", AutoSize = true };
+        _underlineSpacesCheck.CheckedChanged += (sender, args) => UnderlineLabelSpaces = _underlineSpacesCheck.Checked;
+        table.SetColumnSpan(_underlineSpacesCheck, 2);
+        table.Controls.Add(_underlineSpacesCheck, 2, 0);
+
+        _overrideLabelColorsCheck = new CheckBox { Text = "Override Label Colors", AutoSize = true };
+        _overrideLabelColorsCheck.CheckedChanged += (sender, args) =>
         {
-            if (_gradientCombo.SelectedItem != null)
-                GradientString = _gradientCombo.SelectedItem.ToString();
-            UpdateBackgroundControlStates();
+            OverrideTextColor = _overrideLabelColorsCheck.Checked;
+            UpdateOverrideControlStates();
         };
-        table.Controls.Add(_gradientCombo, 1, 0);
+        table.Controls.Add(_overrideLabelColorsCheck, 0, 1);
 
-        table.Controls.Add(MakeLabel("Color 1:"), 0, 1);
-        _backgroundColorButton = MakeColorButton(BackgroundColor, color => BackgroundColor = color);
-        table.Controls.Add(_backgroundColorButton, 1, 1);
+        _overrideTimeColorsCheck = new CheckBox { Text = "Override Time Colors", AutoSize = true };
+        _overrideTimeColorsCheck.CheckedChanged += (sender, args) =>
+        {
+            OverrideTimeColor = _overrideTimeColorsCheck.Checked;
+            UpdateOverrideControlStates();
+        };
+        table.Controls.Add(_overrideTimeColorsCheck, 1, 1);
 
-        table.Controls.Add(MakeLabel("Color 2:"), 0, 2);
-        _backgroundColor2Button = MakeColorButton(BackgroundColor2, color => BackgroundColor2 = color);
-        table.Controls.Add(_backgroundColor2Button, 1, 2);
+        var gapLabel = MakeLabel("Distance between labels and times:");
+        table.SetColumnSpan(gapLabel, 3);
+        table.Controls.Add(gapLabel, 0, 2);
+        _innerGapBox = MakeNumber(-60, 60, InnerRowGap);
+        _innerGapBox.ValueChanged += (sender, args) => InnerRowGap = (int)_innerGapBox.Value;
+        table.Controls.Add(_innerGapBox, 3, 2);
 
         return table;
     }
 
+    private Control BuildLabelsSection()
+    {
+        var table = MakeCompactRows(3, includeShowColumn: false);
+
+        AddLabelRow(
+            table,
+            0,
+            "Label 1 - SoB",
+            () => Label1Text,
+            value => Label1Text = value,
+            () => Label1Color,
+            value =>
+            {
+                Label1Color = value;
+                TextColor = Label1Color;
+            },
+            () => Label1XOffset,
+            value => Label1XOffset = value,
+            out _label1Box,
+            out _label1ColorButton,
+            out _label1OffsetBox);
+        AddLabelRow(
+            table,
+            1,
+            "Label 2 - Delta",
+            () => Label2Text,
+            value => Label2Text = value,
+            () => Label2Color,
+            value => Label2Color = value,
+            () => Label2XOffset,
+            value => Label2XOffset = value,
+            out _label2Box,
+            out _label2ColorButton,
+            out _label2OffsetBox);
+        AddLabelRow(
+            table,
+            2,
+            "Label 3 - BPT",
+            () => Label3Text,
+            value => Label3Text = value,
+            () => Label3Color,
+            value => Label3Color = value,
+            () => Label3XOffset,
+            value => Label3XOffset = value,
+            out _label3Box,
+            out _label3ColorButton,
+            out _label3OffsetBox);
+
+        return table;
+    }
+
+    private Control BuildTimesSection()
+    {
+        var table = MakeCompactRows(3, includeShowColumn: true);
+
+        AddTimeRow(
+            table,
+            0,
+            "Time 1 - SoB",
+            () => ShowTime1,
+            value => ShowTime1 = value,
+            () => Time1Color,
+            value =>
+            {
+                Time1Color = value;
+                TimeColor = Time1Color;
+            },
+            () => MoveSobTimeLeft,
+            value => MoveSobTimeLeft = value,
+            out _showTime1Check,
+            out _time1ColorButton,
+            out _sobOffsetBox);
+        AddTimeRow(
+            table,
+            1,
+            "Time 2 - Delta",
+            () => ShowTime2,
+            value => ShowTime2 = value,
+            () => Time2Color,
+            value => Time2Color = value,
+            () => MiddleValueXOffset,
+            value => MiddleValueXOffset = value,
+            out _showTime2Check,
+            out _time2ColorButton,
+            out _middleOffsetBox);
+        AddTimeRow(
+            table,
+            2,
+            "Time 3 - BPT",
+            () => ShowTime3,
+            value => ShowTime3 = value,
+            () => Time3Color,
+            value => Time3Color = value,
+            () => MoveBptTimeLeft,
+            value => MoveBptTimeLeft = value,
+            out _showTime3Check,
+            out _time3ColorButton,
+            out _bptOffsetBox);
+
+        return table;
+    }
+
+    private static TableLayoutPanel MakeCompactRows(int rows, bool includeShowColumn)
+    {
+        var table = new TableLayoutPanel
+        {
+            AutoSize = false,
+            ColumnCount = includeShowColumn ? 6 : 5,
+            RowCount = rows,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            Width = 420,
+            Height = rows * 29
+        };
+
+        if (includeShowColumn)
+        {
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        }
+        else
+        {
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        }
+
+        for (int i = 0; i < rows; i++)
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
+
+        return table;
+    }
+
+    private void AddLabelRow(
+        TableLayoutPanel table,
+        int row,
+        string title,
+        Func<string> getText,
+        Action<string> setText,
+        Func<Color> getColor,
+        Action<Color> setColor,
+        Func<int> getMove,
+        Action<int> setMove,
+        out TextBox textBox,
+        out Button colorButton,
+        out NumericUpDown moveBox)
+    {
+        table.Controls.Add(MakeCellLabel(title), 0, row);
+        table.Controls.Add(MakeCellLabel("Move (px):"), 1, row);
+
+        moveBox = MakeNumber(-500, 500, getMove());
+        moveBox.ValueChanged += (sender, args) => setMove((int)((NumericUpDown)sender!).Value);
+        table.Controls.Add(moveBox, 2, row);
+
+        colorButton = MakeColorButton(getColor(), setColor);
+        table.Controls.Add(colorButton, 3, row);
+
+        textBox = MakeTextBox(getText(), 80);
+        textBox.TextChanged += (sender, args) => setText(((TextBox)sender!).Text);
+        table.Controls.Add(textBox, 4, row);
+    }
+
+    private void AddTimeRow(
+        TableLayoutPanel table,
+        int row,
+        string title,
+        Func<bool> getShow,
+        Action<bool> setShow,
+        Func<Color> getColor,
+        Action<Color> setColor,
+        Func<int> getMove,
+        Action<int> setMove,
+        out CheckBox showCheck,
+        out Button colorButton,
+        out NumericUpDown moveBox)
+    {
+        table.Controls.Add(MakeCellLabel(title), 0, row);
+
+        showCheck = new CheckBox
+        {
+            AutoSize = false,
+            Width = 18,
+            Height = 18,
+            Anchor = AnchorStyles.Left,
+            CheckAlign = ContentAlignment.MiddleCenter,
+            Text = string.Empty
+        };
+        showCheck.Checked = getShow();
+        showCheck.CheckedChanged += (sender, args) => setShow(((CheckBox)sender!).Checked);
+        table.Controls.Add(showCheck, 1, row);
+
+        table.Controls.Add(MakeCellLabel("Move (px):"), 2, row);
+
+        moveBox = MakeNumber(-500, 500, getMove());
+        moveBox.ValueChanged += (sender, args) => setMove((int)((NumericUpDown)sender!).Value);
+        table.Controls.Add(moveBox, 3, row);
+
+        colorButton = MakeColorButton(getColor(), setColor);
+        table.Controls.Add(colorButton, 4, row);
+    }
+
     private static GroupBox MakeSection(string title, Control content)
     {
-        Size preferred = content.GetPreferredSize(new Size(420, 0));
-        content.Location = new Point(6, 19);
-        content.Size = new Size(420, preferred.Height);
+        int sectionWidth = 440;
+        int contentWidth = sectionWidth - 18;
+        Size preferred = content.GetPreferredSize(new Size(contentWidth, 0));
+        content.Location = new Point(8, 19);
+        content.Size = new Size(contentWidth, preferred.Height);
 
         var group = new GroupBox
         {
             Text = title,
             Padding = new Padding(6),
             Margin = new Padding(0, 0, 0, 6),
-            Size = new Size(440, Math.Max(48, preferred.Height + 28))
+            Size = new Size(sectionWidth, Math.Max(48, preferred.Height + 30))
         };
         group.Controls.Add(content);
         return group;
     }
 
-    private static TableLayoutPanel MakeGrid(int rows)
+    private void ResizeSections()
     {
-        var table = new TableLayoutPanel
-        {
-            AutoSize = true,
-            ColumnCount = 2,
-            RowCount = rows,
-            Padding = Padding.Empty,
-            Margin = Padding.Empty,
-            Width = 420
-        };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        for (int i = 0; i < rows; i++)
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
-        table.Height = rows * 29;
-        return table;
-    }
+        if (_scrollPanel == null || _contentPanel == null)
+            return;
 
-    private static void AddSpanningControl(TableLayoutPanel table, Control control, int row)
-    {
-        table.SetColumnSpan(control, 2);
-        table.Controls.Add(control, 0, row);
+        int previousScrollY = _resetScrollPosition ? 0 : -_scrollPanel.AutoScrollPosition.Y;
+
+        _scrollPanel.SuspendLayout();
+        _contentPanel.SuspendLayout();
+
+        _scrollPanel.AutoScrollPosition = Point.Empty;
+
+        int width = Math.Max(320, _scrollPanel.ClientSize.Width - _scrollPanel.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - 4);
+        int y = 0;
+        _contentPanel.Location = new Point(_scrollPanel.Padding.Left, _scrollPanel.Padding.Top);
+        _contentPanel.Width = width;
+
+        foreach (Control control in _contentPanel.Controls)
+        {
+            control.Location = new Point(0, y);
+            control.Width = width;
+            if (control is GroupBox group && group.Controls.Count > 0)
+            {
+                Control content = group.Controls[0];
+                int contentWidth = Math.Max(240, width - 18);
+                Size preferred = content.GetPreferredSize(new Size(contentWidth, 0));
+                content.Width = contentWidth;
+                content.Height = preferred.Height;
+                group.Height = Math.Max(48, content.Height + 30);
+            }
+
+            y = control.Bottom + control.Margin.Bottom;
+        }
+
+        _contentPanel.Height = y;
+        _scrollPanel.AutoScrollMinSize = new Size(0, y + _scrollPanel.Padding.Vertical);
+
+        int maxScrollY = Math.Max(0, y + _scrollPanel.Padding.Vertical - _scrollPanel.ClientSize.Height);
+        if (previousScrollY > maxScrollY)
+            previousScrollY = maxScrollY;
+        if (previousScrollY > 0)
+            _scrollPanel.AutoScrollPosition = new Point(0, previousScrollY);
+        else
+            _scrollPanel.AutoScrollPosition = Point.Empty;
+
+        _resetScrollPosition = false;
+
+        _contentPanel.ResumeLayout(true);
+        _scrollPanel.ResumeLayout(true);
     }
 
     private static Label MakeLabel(string text) => new Label
@@ -395,6 +653,15 @@ public partial class TotalTimelossSettings : UserControl
         Text = text,
         AutoSize = true,
         Anchor = AnchorStyles.Left | AnchorStyles.Right,
+        TextAlign = ContentAlignment.MiddleLeft
+    };
+
+    private static Label MakeCellLabel(string text) => new Label
+    {
+        Text = text,
+        AutoSize = false,
+        Dock = DockStyle.Fill,
+        Margin = Padding.Empty,
         TextAlign = ContentAlignment.MiddleLeft
     };
 
@@ -414,15 +681,15 @@ public partial class TotalTimelossSettings : UserControl
 
     private static NumericUpDown MakeNumber(int minimum, int maximum, int value)
     {
-        var numeric = new NumericUpDown
+        return new NumericUpDown
         {
             Minimum = minimum,
             Maximum = maximum,
             DecimalPlaces = 0,
             Width = 70,
-            Value = Clamp(value, minimum, maximum)
+            Value = Clamp(value, minimum, maximum),
+            Anchor = AnchorStyles.Left
         };
-        return numeric;
     }
 
     private Button MakeColorButton(Color initial, Action<Color> setter)
@@ -446,27 +713,31 @@ public partial class TotalTimelossSettings : UserControl
 
     private void UpdateControlsFromSettings()
     {
-        _label1Box.Text = Label1Text;
-        _label2Box.Text = Label2Text;
-        _label3Box.Text = Label3Text;
         _showLabelsCheck.Checked = Display2Rows;
         _underlineLabelsCheck.Checked = UnderlineLabels;
+        _underlineSpacesCheck.Checked = UnderlineLabelSpaces;
         _overrideLabelColorsCheck.Checked = OverrideTextColor;
         _overrideTimeColorsCheck.Checked = OverrideTimeColor;
 
+        _label1Box.Text = Label1Text;
+        _label2Box.Text = Label2Text;
+        _label3Box.Text = Label3Text;
         _label1ColorButton.BackColor = Label1Color;
         _label2ColorButton.BackColor = Label2Color;
         _label3ColorButton.BackColor = Label3Color;
-        _time1ColorButton.BackColor = Time1Color;
-        _time2ColorButton.BackColor = Time2Color;
-        _time3ColorButton.BackColor = Time3Color;
-
-        _sobOffsetBox.Value = Clamp(MoveSobTimeLeft, (int)_sobOffsetBox.Minimum, (int)_sobOffsetBox.Maximum);
-        _bptOffsetBox.Value = Clamp(MoveBptTimeLeft, (int)_bptOffsetBox.Minimum, (int)_bptOffsetBox.Maximum);
-        _middleOffsetBox.Value = Clamp(MiddleValueXOffset, (int)_middleOffsetBox.Minimum, (int)_middleOffsetBox.Maximum);
         _label1OffsetBox.Value = Clamp(Label1XOffset, (int)_label1OffsetBox.Minimum, (int)_label1OffsetBox.Maximum);
         _label2OffsetBox.Value = Clamp(Label2XOffset, (int)_label2OffsetBox.Minimum, (int)_label2OffsetBox.Maximum);
         _label3OffsetBox.Value = Clamp(Label3XOffset, (int)_label3OffsetBox.Minimum, (int)_label3OffsetBox.Maximum);
+
+        _showTime1Check.Checked = ShowTime1;
+        _showTime2Check.Checked = ShowTime2;
+        _showTime3Check.Checked = ShowTime3;
+        _time1ColorButton.BackColor = Time1Color;
+        _time2ColorButton.BackColor = Time2Color;
+        _time3ColorButton.BackColor = Time3Color;
+        _sobOffsetBox.Value = Clamp(MoveSobTimeLeft, (int)_sobOffsetBox.Minimum, (int)_sobOffsetBox.Maximum);
+        _middleOffsetBox.Value = Clamp(MiddleValueXOffset, (int)_middleOffsetBox.Minimum, (int)_middleOffsetBox.Maximum);
+        _bptOffsetBox.Value = Clamp(MoveBptTimeLeft, (int)_bptOffsetBox.Minimum, (int)_bptOffsetBox.Maximum);
         _innerGapBox.Value = Clamp(InnerRowGap, (int)_innerGapBox.Minimum, (int)_innerGapBox.Maximum);
 
         _secondsRadio.Checked = Accuracy == TimeAccuracy.Seconds;
@@ -559,6 +830,10 @@ public partial class TotalTimelossSettings : UserControl
         Label3XOffset = ReadInt(element, "Label3XOffset", Label3XOffset);
         InnerRowGap = ReadInt(element, "InnerRowGap", InnerRowGap);
         UnderlineLabels = ReadBool(element, "UnderlineLabels", UnderlineLabels);
+        UnderlineLabelSpaces = ReadBool(element, "UnderlineLabelSpaces", UnderlineLabelSpaces);
+        ShowTime1 = ReadBool(element, "ShowTime1", ShowTime1);
+        ShowTime2 = ReadBool(element, "ShowTime2", ShowTime2);
+        ShowTime3 = ReadBool(element, "ShowTime3", ShowTime3);
 
         BackgroundColor = ReadColor(element, "BackgroundColor", BackgroundColor);
         BackgroundColor2 = ReadColor(element, "BackgroundColor2", BackgroundColor2);
@@ -582,7 +857,7 @@ public partial class TotalTimelossSettings : UserControl
 
     private int CreateSettingsNode(XmlDocument document, XmlElement parent)
     {
-        return SettingsHelper.CreateSetting(document, parent, "Version", "2.0") ^
+        return SettingsHelper.CreateSetting(document, parent, "Version", "3.1") ^
                SettingsHelper.CreateSetting(document, parent, "TextColor", TextColor) ^
                SettingsHelper.CreateSetting(document, parent, "OverrideTextColor", OverrideTextColor) ^
                SettingsHelper.CreateSetting(document, parent, "TimeColor", TimeColor) ^
@@ -605,6 +880,10 @@ public partial class TotalTimelossSettings : UserControl
                SettingsHelper.CreateSetting(document, parent, "Label3XOffset", Label3XOffset) ^
                SettingsHelper.CreateSetting(document, parent, "InnerRowGap", InnerRowGap) ^
                SettingsHelper.CreateSetting(document, parent, "UnderlineLabels", UnderlineLabels) ^
+               SettingsHelper.CreateSetting(document, parent, "UnderlineLabelSpaces", UnderlineLabelSpaces) ^
+               SettingsHelper.CreateSetting(document, parent, "ShowTime1", ShowTime1) ^
+               SettingsHelper.CreateSetting(document, parent, "ShowTime2", ShowTime2) ^
+               SettingsHelper.CreateSetting(document, parent, "ShowTime3", ShowTime3) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundColor", BackgroundColor) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundColor2", BackgroundColor2) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundGradient", BackgroundGradient) ^

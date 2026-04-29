@@ -174,32 +174,65 @@ public class TotalTimeloss : IComponent
         if (string.IsNullOrEmpty(text) || font == null || color.A == 0 || rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        if (string.IsNullOrWhiteSpace(text))
+        if (!Settings.UnderlineLabelSpaces && string.IsNullOrWhiteSpace(text))
             return;
 
-        int visibleStart = 0;
-        while (visibleStart < text.Length && char.IsWhiteSpace(text[visibleStart]))
-            visibleStart++;
-
-        int visibleEnd = text.Length - 1;
-        while (visibleEnd >= visibleStart && char.IsWhiteSpace(text[visibleEnd]))
-            visibleEnd--;
-
-        if (visibleEnd < visibleStart)
-            return;
-
-        string visibleText = text.Substring(visibleStart, visibleEnd - visibleStart + 1);
-
-        SizeF measured = g.MeasureString(text, font);
+        SizeF measured = Settings.UnderlineLabelSpaces
+            ? MeasureTextIncludingSpaces(g, text, font)
+            : g.MeasureString(text, font);
         float textX = rect.X;
         if (format.Alignment == StringAlignment.Far)
             textX = rect.Right - measured.Width;
         else if (format.Alignment == StringAlignment.Center)
             textX = rect.X + (rect.Width - measured.Width) / 2f;
 
-        RectangleF visibleBounds = MeasureVisibleCharacterBounds(g, text, font, textX, rect.Y, format, visibleStart, visibleText.Length);
-        float startX = Clamp(visibleBounds.Left, rect.Left, rect.Right);
-        float endX = Clamp(visibleBounds.Right, rect.Left, rect.Right);
+        float underlineLeft = textX;
+        float underlineRight = textX + measured.Width;
+
+        if (Settings.UnderlineLabelSpaces)
+        {
+            RectangleF fullBounds = MeasureCharacterBounds(
+                g,
+                text,
+                font,
+                textX,
+                rect.Y,
+                format,
+                0,
+                text.Length,
+                true);
+            underlineLeft = fullBounds.Left;
+            underlineRight = fullBounds.Right;
+        }
+        else
+        {
+            int visibleStart = 0;
+            while (visibleStart < text.Length && char.IsWhiteSpace(text[visibleStart]))
+                visibleStart++;
+
+            int visibleEnd = text.Length - 1;
+            while (visibleEnd >= visibleStart && char.IsWhiteSpace(text[visibleEnd]))
+                visibleEnd--;
+
+            if (visibleEnd < visibleStart)
+                return;
+
+            RectangleF visibleBounds = MeasureCharacterBounds(
+                g,
+                text,
+                font,
+                textX,
+                rect.Y,
+                format,
+                visibleStart,
+                visibleEnd - visibleStart + 1,
+                false);
+            underlineLeft = visibleBounds.Left;
+            underlineRight = visibleBounds.Right;
+        }
+
+        float startX = Clamp(underlineLeft, rect.Left, rect.Right);
+        float endX = Clamp(underlineRight, rect.Left, rect.Right);
         if (endX - startX <= 0.5f)
             return;
 
@@ -236,7 +269,24 @@ public class TotalTimeloss : IComponent
         }
     }
 
-    private RectangleF MeasureVisibleCharacterBounds(Graphics g, string text, Font font, float x, float y, StringFormat format, int start, int length)
+    private SizeF MeasureTextIncludingSpaces(Graphics g, string text, Font font)
+    {
+        RectangleF bounds = MeasureCharacterBounds(
+            g,
+            text,
+            font,
+            0f,
+            0f,
+            StringFormat.GenericDefault,
+            0,
+            text.Length,
+            true);
+
+        SizeF fallback = g.MeasureString(text, font);
+        return new SizeF(Math.Max(bounds.Width, fallback.Width), Math.Max(bounds.Height, fallback.Height));
+    }
+
+    private RectangleF MeasureCharacterBounds(Graphics g, string text, Font font, float x, float y, StringFormat format, int start, int length, bool measureTrailingSpaces)
     {
         using var rangeFormat = new StringFormat(format)
         {
@@ -244,6 +294,8 @@ public class TotalTimeloss : IComponent
             Trimming = StringTrimming.None
         };
         rangeFormat.FormatFlags |= StringFormatFlags.NoWrap;
+        if (measureTrailingSpaces)
+            rangeFormat.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
         rangeFormat.SetMeasurableCharacterRanges(new[] { new CharacterRange(start, length) });
 
         Region[] ranges = g.MeasureCharacterRanges(text, font, new RectangleF(x, y, 9999f, 9999f), rangeFormat);
@@ -333,6 +385,9 @@ public class TotalTimeloss : IComponent
         var bptStr = FormatTime(bpt, Settings.Accuracy);
         var tlStr = FormatTime(tl, Settings.Accuracy);
         var tlDisplayStr = tl > TimeSpan.Zero ? "+" + tlStr : "";
+        var sobDisplayStr = Settings.ShowTime1 ? sobStr : string.Empty;
+        var tlValueDisplayStr = Settings.ShowTime2 ? tlDisplayStr : string.Empty;
+        var bptDisplayStr = Settings.ShowTime3 ? bptStr : string.Empty;
 
         var horizontalPad = 5f;
         var columnWidth = width / 3f;
@@ -381,7 +436,7 @@ public class TotalTimeloss : IComponent
         }
 
         DrawTimesRow(g, state, width, columnWidth, rowHeight, valueY, leftFormat, rightFormat,
-            sobStr, tlDisplayStr, bptStr, time1Color, time2Color, time3Color);
+            sobDisplayStr, tlValueDisplayStr, bptDisplayStr, time1Color, time2Color, time3Color);
     }
 
     private void DrawLabelsRow(
@@ -404,51 +459,29 @@ public class TotalTimeloss : IComponent
         float leftEdge = horizontalPad;
         float rightEdge = Math.Max(leftEdge, width - horizontalPad);
         float middleLeft = columnWidth;
-        float middleRight = columnWidth * 2f;
         float rightColumnLeft = columnWidth * 2f;
-        float collisionGap = 2f;
 
-        RectangleF label1Rect;
-        RectangleF label2Rect = new RectangleF(middleLeft, 0f, columnWidth, rowHeight);
-        RectangleF label3Rect;
-
-        if (!string.IsNullOrEmpty(label2))
+        float label3BaseX = rightColumnLeft;
+        if (string.IsNullOrEmpty(label2))
         {
-            label1Rect = new RectangleF(leftEdge, 0f, Math.Max(0f, middleLeft - leftEdge), rowHeight);
-            label3Rect = new RectangleF(rightColumnLeft, 0f, Math.Max(0f, rightEdge - rightColumnLeft), rowHeight);
-        }
-        else
-        {
-            float label1Width = g.MeasureString(label1, state.LayoutSettings.TextFont).Width;
             float label3Width = g.MeasureString(label3, state.LayoutSettings.TextFont).Width;
-            float label1Right = Math.Min(middleRight, leftEdge + label1Width);
-            float label3Left = label3Width <= rightEdge - rightColumnLeft
-                ? rightColumnLeft
-                : Math.Max(middleLeft, rightEdge - label3Width);
-
-            if (label1Right + collisionGap > label3Left)
-            {
-                label1Right = Math.Max(leftEdge, label3Left - collisionGap);
-            }
-
-            label1Rect = new RectangleF(leftEdge, 0f, Math.Max(0f, label1Right - leftEdge), rowHeight);
-            label3Rect = new RectangleF(label3Left, 0f, Math.Max(0f, rightEdge - label3Left), rowHeight);
+            if (label3Width > rightEdge - rightColumnLeft)
+                label3BaseX = Math.Max(middleLeft, rightEdge - label3Width);
         }
 
-        label1Rect = OffsetRectPreserveRight(label1Rect, Settings.Label1XOffset);
-        label2Rect = OffsetRectPreserveRight(label2Rect, Settings.Label2XOffset);
-        label3Rect = OffsetRectPreserveRight(label3Rect, Settings.Label3XOffset);
+        RectangleF label1Rect = MoveRectWithinRow(leftEdge, rightEdge, Settings.Label1XOffset, rowHeight);
+        RectangleF label2Rect = MoveRectWithinRow(middleLeft, rightEdge, Settings.Label2XOffset, rowHeight);
+        RectangleF label3Rect = MoveRectWithinRow(label3BaseX, rightEdge, Settings.Label3XOffset, rowHeight);
 
         DrawLabelWithEffects(g, label1, state.LayoutSettings.TextFont, label1Color, label1Rect, leftFormat, state.LayoutSettings);
         DrawLabelWithEffects(g, label2, state.LayoutSettings.TextFont, label2Color, label2Rect, leftFormat, state.LayoutSettings);
         DrawLabelWithEffects(g, label3, state.LayoutSettings.TextFont, label3Color, label3Rect, leftFormat, state.LayoutSettings);
     }
 
-    private static RectangleF OffsetRectPreserveRight(RectangleF rect, float offset)
+    private static RectangleF MoveRectWithinRow(float baseX, float rightEdge, float offset, float height)
     {
-        float right = rect.Right;
-        float x = rect.X + offset;
-        return new RectangleF(x, rect.Y, Math.Max(0f, right - x), rect.Height);
+        float x = baseX + offset;
+        return new RectangleF(x, 0f, Math.Max(0f, rightEdge - x), height);
     }
 
     private void DrawTimesRow(
@@ -502,6 +535,7 @@ public class TotalTimeloss : IComponent
     public Control GetSettingsControl(LayoutMode mode)
     {
         Settings.Mode = mode;
+        Settings.PrepareForDisplay();
         return Settings;
     }
 
