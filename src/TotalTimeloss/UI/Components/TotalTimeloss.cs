@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.Xml;
@@ -12,7 +13,6 @@ using LiveSplit.Model.Comparisons;
 using LiveSplit.TimeFormatters;
 using LiveSplit.UI;
 using LiveSplit.UI.Components;
-using System.Linq;
 
 namespace TotalTimeloss.UI.Components;
 
@@ -391,11 +391,13 @@ public class TotalTimeloss : IComponent
 
         var horizontalPad = 5f;
         var columnWidth = width / 3f;
-        var rowHeight = g.MeasureString(sobStr, state.LayoutSettings.TextFont).Height;
-        var innerRowGap = Math.Max(Settings.InnerRowGap, -rowHeight + 2f);
+        var rowHeight = Math.Max(
+            g.MeasureString(sobStr, state.LayoutSettings.TextFont).Height,
+            g.MeasureString(sobStr, state.LayoutSettings.TimesFont).Height);
 
         bool showLabels = Settings.Display2Rows;
-        VerticalHeight = showLabels ? rowHeight * 2 + innerRowGap : rowHeight;
+        float valueY = showLabels ? Math.Max(0f, rowHeight + Settings.InnerRowGap) : 0f;
+        VerticalHeight = showLabels ? Math.Max(rowHeight, valueY + rowHeight) : rowHeight;
         HorizontalWidth = width;
 
         DrawBackground(g, HorizontalWidth, VerticalHeight);
@@ -426,13 +428,10 @@ public class TotalTimeloss : IComponent
             Trimming = StringTrimming.None
         };
 
-        float valueY = 0f;
-
         if (showLabels)
         {
             DrawLabelsRow(g, state, width, columnWidth, horizontalPad, rowHeight, leftFormat, rightFormat,
                 label1Color, label2Color, label3Color);
-            valueY = rowHeight + innerRowGap;
         }
 
         DrawTimesRow(g, state, width, columnWidth, rowHeight, valueY, leftFormat, rightFormat,
@@ -530,7 +529,16 @@ public class TotalTimeloss : IComponent
     public float HorizontalWidth { get; set; }
     public float MinimumHeight => 20;
 
-    public string ComponentName => "Total Timeloss";
+    public string ComponentName
+    {
+        get
+        {
+            string name = Settings.InstanceName;
+            return string.IsNullOrWhiteSpace(name)
+                ? "Total Timeloss"
+                : "Total Timeloss - " + name;
+        }
+    }
 
     public Control GetSettingsControl(LayoutMode mode)
     {

@@ -11,6 +11,7 @@ namespace TotalTimeloss.UI.Components;
 
 public partial class TotalTimelossSettings : UserControl
 {
+    public string InstanceName { get; set; }
     public string Label1Text { get; set; }
     public string Label2Text { get; set; }
     public string Label3Text { get; set; }
@@ -70,6 +71,7 @@ public partial class TotalTimelossSettings : UserControl
     private Panel _scrollPanel = null!;
     private Panel _contentPanel = null!;
     private bool _resetScrollPosition;
+    private TextBox _instanceNameBox = null!;
     private CheckBox _showLabelsCheck = null!;
     private CheckBox _underlineLabelsCheck = null!;
     private CheckBox _underlineSpacesCheck = null!;
@@ -104,6 +106,7 @@ public partial class TotalTimelossSettings : UserControl
 
     public TotalTimelossSettings()
     {
+        InstanceName = string.Empty;
         Label1Text = "SoB";
         Label2Text = string.Empty;
         Label3Text = "BPT";
@@ -173,6 +176,7 @@ public partial class TotalTimelossSettings : UserControl
         _scrollPanel.Controls.Add(_contentPanel);
         Controls.Add(_scrollPanel);
 
+        AddSettingsSection(MakeSection("Instance", BuildInstanceSection()));
         AddSettingsSection(MakeSection("Background", BuildBackgroundSection()));
         AddSettingsSection(MakeSection("Accuracy", BuildAccuracySection()));
         AddSettingsSection(MakeSection("Options", BuildOptionsSection()));
@@ -238,6 +242,30 @@ public partial class TotalTimelossSettings : UserControl
         section.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
         section.TabIndex = _contentPanel.Controls.Count;
         _contentPanel.Controls.Add(section);
+    }
+
+    private Control BuildInstanceSection()
+    {
+        var table = new TableLayoutPanel
+        {
+            AutoSize = false,
+            ColumnCount = 2,
+            RowCount = 1,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            Width = 420,
+            Height = 29
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
+
+        table.Controls.Add(MakeLabel("Name:"), 0, 0);
+        _instanceNameBox = MakeTextBox(InstanceName, 80);
+        _instanceNameBox.TextChanged += (sender, args) => InstanceName = _instanceNameBox.Text;
+        table.Controls.Add(_instanceNameBox, 1, 0);
+
+        return table;
     }
 
     private Control BuildBackgroundSection()
@@ -364,7 +392,7 @@ public partial class TotalTimelossSettings : UserControl
         var gapLabel = MakeLabel("Distance between labels and times:");
         table.SetColumnSpan(gapLabel, 3);
         table.Controls.Add(gapLabel, 0, 2);
-        _innerGapBox = MakeNumber(-60, 60, InnerRowGap);
+        _innerGapBox = MakeNumber(-1000, 1000, InnerRowGap);
         _innerGapBox.ValueChanged += (sender, args) => InnerRowGap = (int)_innerGapBox.Value;
         table.Controls.Add(_innerGapBox, 3, 2);
 
@@ -713,6 +741,7 @@ public partial class TotalTimelossSettings : UserControl
 
     private void UpdateControlsFromSettings()
     {
+        _instanceNameBox.Text = InstanceName;
         _showLabelsCheck.Checked = Display2Rows;
         _underlineLabelsCheck.Checked = UnderlineLabels;
         _underlineSpacesCheck.Checked = UnderlineLabelSpaces;
@@ -807,6 +836,7 @@ public partial class TotalTimelossSettings : UserControl
         TextColor = oldTextColor;
         TimeColor = oldTimeColor;
 
+        InstanceName = ReadString(element, "InstanceName", ReadString(element, "DisplayText", InstanceName));
         Label1Text = ReadString(element, "Label1Text", Label1Text);
         Label2Text = ReadString(element, "Label2Text", Label2Text);
         Label3Text = ReadString(element, "Label3Text", Label3Text);
@@ -857,7 +887,9 @@ public partial class TotalTimelossSettings : UserControl
 
     private int CreateSettingsNode(XmlDocument document, XmlElement parent)
     {
-        return SettingsHelper.CreateSetting(document, parent, "Version", "3.1") ^
+        return SettingsHelper.CreateSetting(document, parent, "Version", "3.2") ^
+               SettingsHelper.CreateSetting(document, parent, "InstanceName", InstanceName) ^
+               SettingsHelper.CreateSetting(document, parent, "DisplayText", InstanceName) ^
                SettingsHelper.CreateSetting(document, parent, "TextColor", TextColor) ^
                SettingsHelper.CreateSetting(document, parent, "OverrideTextColor", OverrideTextColor) ^
                SettingsHelper.CreateSetting(document, parent, "TimeColor", TimeColor) ^
