@@ -13,7 +13,7 @@ public class TotalTimelossFactory : IComponentFactory
 {
     public string ComponentName => "Total Timeloss";
 
-    public string Description => "Displays Sum of Best, Best Possible Time and the difference between them in a single row, with an optional extra row for labels";
+    public string Description => "Displays configurable Sum of Best, Total Timeloss, and Best Possible Time values.";
 
     public ComponentCategory Category => ComponentCategory.Information;
 
@@ -28,5 +28,5 @@ public class TotalTimelossFactory : IComponentFactory
 
     public string UpdateURL => "";
 
-    public Version Version => Version.Parse("0.0.1");
+    public Version Version => Version.Parse("1.0.0");
 }

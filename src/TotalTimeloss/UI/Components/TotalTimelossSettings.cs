@@ -9,7 +9,7 @@ using LiveSplit.UI;
 
 namespace TotalTimeloss.UI.Components;
 
-public partial class TotalTimelossSettings : UserControl
+public class TotalTimelossSettings : UserControl
 {
     public string InstanceName { get; set; }
     public string Label1Text { get; set; }
@@ -961,61 +961,5 @@ public partial class TotalTimelossSettings : UserControl
         if (value > maximum)
             return maximum;
         return value;
-    }
-
-    private void chkOverrideTimeColor_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is CheckBox checkBox)
-            OverrideTimeColor = checkBox.Checked;
-        UpdateOverrideControlStates();
-    }
-
-    private void chkOverrideTextColor_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is CheckBox checkBox)
-            OverrideTextColor = checkBox.Checked;
-        UpdateOverrideControlStates();
-    }
-
-    private void TotalTimelossSettings_Load(object sender, EventArgs e)
-    {
-        UpdateControlsFromSettings();
-    }
-
-    private void cmbGradientType_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        if (sender is ComboBox combo && combo.SelectedItem != null)
-            GradientString = combo.SelectedItem.ToString();
-        UpdateBackgroundControlStates();
-    }
-
-    private void rdoHundredths_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is RadioButton radio && radio.Checked)
-            Accuracy = TimeAccuracy.Hundredths;
-    }
-
-    private void rdoTenths_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is RadioButton radio && radio.Checked)
-            Accuracy = TimeAccuracy.Tenths;
-    }
-
-    private void rdoSeconds_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is RadioButton radio && radio.Checked)
-            Accuracy = TimeAccuracy.Seconds;
-    }
-
-    private void rdoMilliseconds_CheckedChanged(object sender, EventArgs e)
-    {
-        if (sender is RadioButton radio && radio.Checked)
-            Accuracy = TimeAccuracy.Milliseconds;
-    }
-
-    private void ColorButtonClick(object sender, EventArgs e)
-    {
-        if (sender is Button button)
-            SettingsHelper.ColorButtonClick(button, this);
     }
 }
