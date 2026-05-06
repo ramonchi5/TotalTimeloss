@@ -9,6 +9,13 @@ using LiveSplit.UI;
 
 namespace TotalTimeloss.UI.Components;
 
+public enum TotalTimelossBackgroundCorners
+{
+    All,
+    Top,
+    Bottom
+}
+
 public class TotalTimelossSettings : UserControl
 {
     public string InstanceName { get; set; }
@@ -42,9 +49,14 @@ public class TotalTimelossSettings : UserControl
     public bool ShowTime2 { get; set; }
     public bool ShowTime3 { get; set; }
 
+    public bool BackgroundEnabled { get; set; }
     public Color BackgroundColor { get; set; }
     public Color BackgroundColor2 { get; set; }
+    public Color BackgroundColor3 { get; set; }
+    public int BackgroundColorCount { get; set; }
     public GradientType BackgroundGradient { get; set; }
+    public int BackgroundCornerRadius { get; set; }
+    public TotalTimelossBackgroundCorners BackgroundCorners { get; set; }
     public string GradientString
     {
         get => BackgroundGradient.ToString();
@@ -100,9 +112,14 @@ public class TotalTimelossSettings : UserControl
     private RadioButton _tenthsRadio = null!;
     private RadioButton _hundredthsRadio = null!;
     private RadioButton _millisecondsRadio = null!;
+    private CheckBox _backgroundEnabledCheck = null!;
     private Button _backgroundColorButton = null!;
     private Button _backgroundColor2Button = null!;
+    private Button _backgroundColor3Button = null!;
+    private ComboBox _backgroundColorCountCombo = null!;
     private ComboBox _gradientCombo = null!;
+    private NumericUpDown _backgroundCornerRadiusBox = null!;
+    private ComboBox _backgroundCornersCombo = null!;
 
     public TotalTimelossSettings()
     {
@@ -137,9 +154,14 @@ public class TotalTimelossSettings : UserControl
         ShowTime2 = true;
         ShowTime3 = true;
 
+        BackgroundEnabled = false;
         BackgroundColor = Color.Transparent;
         BackgroundColor2 = Color.Transparent;
+        BackgroundColor3 = Color.Transparent;
+        BackgroundColorCount = 2;
         BackgroundGradient = GradientType.Plain;
+        BackgroundCornerRadius = 0;
+        BackgroundCorners = TotalTimelossBackgroundCorners.All;
         Display2Rows = true;
 
         BuildUI();
@@ -270,29 +292,35 @@ public class TotalTimelossSettings : UserControl
 
     private Control BuildBackgroundSection()
     {
-        var table = new TableLayoutPanel
+        var panel = new FlowLayoutPanel
         {
-            AutoSize = false,
-            ColumnCount = 6,
-            RowCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
             Padding = Padding.Empty,
-            Margin = Padding.Empty,
-            Width = 420,
-            Height = 29
+            Margin = Padding.Empty
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52f));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30f));
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 29f));
 
-        table.Controls.Add(MakeLabel("Gradient:"), 0, 0);
+        var row1 = MakeCompactRow();
+        _backgroundEnabledCheck = new CheckBox
+        {
+            Text = "Enable",
+            AutoSize = true,
+            Margin = new Padding(0, 3, 8, 0)
+        };
+        _backgroundEnabledCheck.CheckedChanged += (sender, args) =>
+        {
+            BackgroundEnabled = _backgroundEnabledCheck.Checked;
+            UpdateBackgroundControlStates();
+        };
+        row1.Controls.Add(_backgroundEnabledCheck);
+
+        row1.Controls.Add(MakeInlineLabel("Gradient:"));
         _gradientCombo = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            Dock = DockStyle.Fill
+            Width = 104
         };
         _gradientCombo.Items.AddRange(new object[] { "Plain", "Vertical", "Horizontal" });
         _gradientCombo.SelectedIndexChanged += (sender, args) =>
@@ -301,17 +329,55 @@ public class TotalTimelossSettings : UserControl
                 GradientString = _gradientCombo.SelectedItem.ToString();
             UpdateBackgroundControlStates();
         };
-        table.Controls.Add(_gradientCombo, 1, 0);
+        row1.Controls.Add(_gradientCombo);
 
-        table.Controls.Add(MakeLabel("Color 1:"), 2, 0);
+        row1.Controls.Add(MakeInlineLabel("1:"));
         _backgroundColorButton = MakeColorButton(BackgroundColor, color => BackgroundColor = color);
-        table.Controls.Add(_backgroundColorButton, 3, 0);
+        row1.Controls.Add(_backgroundColorButton);
 
-        table.Controls.Add(MakeLabel("Color 2:"), 4, 0);
+        row1.Controls.Add(MakeInlineLabel("2:"));
         _backgroundColor2Button = MakeColorButton(BackgroundColor2, color => BackgroundColor2 = color);
-        table.Controls.Add(_backgroundColor2Button, 5, 0);
+        row1.Controls.Add(_backgroundColor2Button);
 
-        return table;
+        row1.Controls.Add(MakeInlineLabel("3:"));
+        _backgroundColor3Button = MakeColorButton(BackgroundColor3, color => BackgroundColor3 = color);
+        row1.Controls.Add(_backgroundColor3Button);
+        panel.Controls.Add(row1);
+
+        var row2 = MakeCompactRow();
+        row2.Controls.Add(MakeInlineLabel("Colors:"));
+        _backgroundColorCountCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 76
+        };
+        _backgroundColorCountCombo.Items.AddRange(new object[] { "2 colors", "3 colors" });
+        _backgroundColorCountCombo.SelectedIndexChanged += (sender, args) =>
+        {
+            BackgroundColorCount = _backgroundColorCountCombo.SelectedIndex == 1 ? 3 : 2;
+            UpdateBackgroundControlStates();
+        };
+        row2.Controls.Add(_backgroundColorCountCombo);
+
+        row2.Controls.Add(MakeInlineLabel("Radius:"));
+        _backgroundCornerRadiusBox = MakeNumber(0, 200, BackgroundCornerRadius);
+        _backgroundCornerRadiusBox.Width = 54;
+        _backgroundCornerRadiusBox.ValueChanged += (sender, args) =>
+            BackgroundCornerRadius = (int)((NumericUpDown)sender!).Value;
+        row2.Controls.Add(_backgroundCornerRadiusBox);
+
+        _backgroundCornersCombo = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Width = 108
+        };
+        _backgroundCornersCombo.Items.AddRange(new object[] { "All corners", "Top corners", "Bottom corners" });
+        _backgroundCornersCombo.SelectedIndexChanged += (sender, args) =>
+            BackgroundCorners = (TotalTimelossBackgroundCorners)_backgroundCornersCombo.SelectedIndex;
+        row2.Controls.Add(_backgroundCornersCombo);
+        panel.Controls.Add(row2);
+
+        return panel;
     }
 
     private Control BuildAccuracySection()
@@ -684,6 +750,25 @@ public class TotalTimelossSettings : UserControl
         TextAlign = ContentAlignment.MiddleLeft
     };
 
+    private static Label MakeInlineLabel(string text) => new Label
+    {
+        Text = text,
+        AutoSize = true,
+        Anchor = AnchorStyles.Left,
+        TextAlign = ContentAlignment.MiddleLeft,
+        Margin = new Padding(0, 4, 3, 0)
+    };
+
+    private static FlowLayoutPanel MakeCompactRow() => new FlowLayoutPanel
+    {
+        AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        FlowDirection = FlowDirection.LeftToRight,
+        WrapContents = false,
+        Padding = Padding.Empty,
+        Margin = new Padding(0, 0, 0, 2)
+    };
+
     private static Label MakeCellLabel(string text) => new Label
     {
         Text = text,
@@ -774,8 +859,13 @@ public class TotalTimelossSettings : UserControl
         _hundredthsRadio.Checked = Accuracy == TimeAccuracy.Hundredths;
         _millisecondsRadio.Checked = Accuracy == TimeAccuracy.Milliseconds;
 
+        _backgroundEnabledCheck.Checked = BackgroundEnabled;
         _backgroundColorButton.BackColor = BackgroundColor;
         _backgroundColor2Button.BackColor = BackgroundColor2;
+        _backgroundColor3Button.BackColor = BackgroundColor3;
+        _backgroundColorCountCombo.SelectedIndex = BackgroundColorCount == 3 ? 1 : 0;
+        _backgroundCornerRadiusBox.Value = Clamp(BackgroundCornerRadius, (int)_backgroundCornerRadiusBox.Minimum, (int)_backgroundCornerRadiusBox.Maximum);
+        _backgroundCornersCombo.SelectedIndex = (int)BackgroundCorners;
         _gradientCombo.SelectedItem = GradientString;
 
         UpdateOverrideControlStates();
@@ -802,8 +892,24 @@ public class TotalTimelossSettings : UserControl
 
     private void UpdateBackgroundControlStates()
     {
+        bool enabled = BackgroundEnabled;
+        bool gradientMode = BackgroundGradient != GradientType.Plain;
+        bool useThreeColors = BackgroundColorCount == 3;
+
+        if (_gradientCombo != null)
+            _gradientCombo.Enabled = enabled;
+        if (_backgroundColorButton != null)
+            _backgroundColorButton.Enabled = enabled;
         if (_backgroundColor2Button != null)
-            _backgroundColor2Button.Enabled = BackgroundGradient != GradientType.Plain;
+            _backgroundColor2Button.Enabled = enabled && gradientMode;
+        if (_backgroundColor3Button != null)
+            _backgroundColor3Button.Enabled = enabled && gradientMode && useThreeColors;
+        if (_backgroundColorCountCombo != null)
+            _backgroundColorCountCombo.Enabled = enabled && gradientMode;
+        if (_backgroundCornerRadiusBox != null)
+            _backgroundCornerRadiusBox.Enabled = enabled;
+        if (_backgroundCornersCombo != null)
+            _backgroundCornersCombo.Enabled = enabled;
     }
 
     private void ApplyMode()
@@ -867,7 +973,14 @@ public class TotalTimelossSettings : UserControl
 
         BackgroundColor = ReadColor(element, "BackgroundColor", BackgroundColor);
         BackgroundColor2 = ReadColor(element, "BackgroundColor2", BackgroundColor2);
+        BackgroundColor3 = ReadColor(element, "BackgroundColor3", BackgroundColor3);
+        BackgroundColorCount = ReadInt(element, "BackgroundColorCount", BackgroundColorCount) == 3 ? 3 : 2;
         GradientString = ReadString(element, "BackgroundGradient", GradientString);
+        BackgroundCornerRadius = Math.Max(0, ReadInt(element, "BackgroundCornerRadius", BackgroundCornerRadius));
+        BackgroundCorners = ReadEnum(element, "BackgroundCorners", BackgroundCorners);
+        if (!Enum.IsDefined(typeof(TotalTimelossBackgroundCorners), BackgroundCorners))
+            BackgroundCorners = TotalTimelossBackgroundCorners.All;
+        BackgroundEnabled = ReadBool(element, "BackgroundEnabled", HasVisibleBackground());
         Display2Rows = ReadBool(element, "Display2Rows", Display2Rows);
 
         UpdateControlsFromSettings();
@@ -887,7 +1000,7 @@ public class TotalTimelossSettings : UserControl
 
     private int CreateSettingsNode(XmlDocument document, XmlElement parent)
     {
-        return SettingsHelper.CreateSetting(document, parent, "Version", "3.2") ^
+        return SettingsHelper.CreateSetting(document, parent, "Version", "3.5") ^
                SettingsHelper.CreateSetting(document, parent, "InstanceName", InstanceName) ^
                SettingsHelper.CreateSetting(document, parent, "DisplayText", InstanceName) ^
                SettingsHelper.CreateSetting(document, parent, "TextColor", TextColor) ^
@@ -916,10 +1029,25 @@ public class TotalTimelossSettings : UserControl
                SettingsHelper.CreateSetting(document, parent, "ShowTime1", ShowTime1) ^
                SettingsHelper.CreateSetting(document, parent, "ShowTime2", ShowTime2) ^
                SettingsHelper.CreateSetting(document, parent, "ShowTime3", ShowTime3) ^
+               SettingsHelper.CreateSetting(document, parent, "BackgroundEnabled", BackgroundEnabled) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundColor", BackgroundColor) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundColor2", BackgroundColor2) ^
+               SettingsHelper.CreateSetting(document, parent, "BackgroundColor3", BackgroundColor3) ^
+               SettingsHelper.CreateSetting(document, parent, "BackgroundColorCount", BackgroundColorCount) ^
                SettingsHelper.CreateSetting(document, parent, "BackgroundGradient", BackgroundGradient) ^
+               SettingsHelper.CreateSetting(document, parent, "BackgroundCornerRadius", BackgroundCornerRadius) ^
+               SettingsHelper.CreateSetting(document, parent, "BackgroundCorners", BackgroundCorners) ^
                SettingsHelper.CreateSetting(document, parent, "Display2Rows", Display2Rows);
+    }
+
+    private bool HasVisibleBackground()
+    {
+        if (BackgroundGradient == GradientType.Plain)
+            return BackgroundColor.A > 0;
+
+        return BackgroundColor.A > 0 ||
+               BackgroundColor2.A > 0 ||
+               (BackgroundColorCount == 3 && BackgroundColor3.A > 0);
     }
 
     private static string ReadString(XmlElement element, string name, string fallback)

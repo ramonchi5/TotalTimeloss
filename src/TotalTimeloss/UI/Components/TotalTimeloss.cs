@@ -62,26 +62,120 @@ public class TotalTimeloss : IComponent
 
     private void DrawBackground(Graphics g, float width, float height)
     {
+        if (!Settings.BackgroundEnabled)
+            return;
+
+        if (width <= 0 || height <= 0)
+            return;
+
+        var rect = new RectangleF(0, 0, Math.Max(width, 1), Math.Max(height, 1));
         if (Settings.BackgroundGradient == GradientType.Plain)
         {
             if (Settings.BackgroundColor.A > 0)
             {
                 using var brush = new SolidBrush(Settings.BackgroundColor);
-                g.FillRectangle(brush, 0, 0, width, height);
+                FillBackground(g, brush, rect, Settings.BackgroundCornerRadius, Settings.BackgroundCorners);
             }
         }
         else
         {
+            bool useThreeColors = Settings.BackgroundColorCount == 3;
+            bool hasVisibleColor =
+                Settings.BackgroundColor.A > 0 ||
+                Settings.BackgroundColor2.A > 0 ||
+                (useThreeColors && Settings.BackgroundColor3.A > 0);
+            if (!hasVisibleColor)
+                return;
+
             var mode = Settings.BackgroundGradient == GradientType.Horizontal
                 ? LinearGradientMode.Horizontal
                 : LinearGradientMode.Vertical;
             using var brush = new LinearGradientBrush(
-                new RectangleF(0, 0, Math.Max(width, 1), Math.Max(height, 1)),
+                rect,
                 Settings.BackgroundColor,
-                Settings.BackgroundColor2,
+                useThreeColors ? Settings.BackgroundColor3 : Settings.BackgroundColor2,
                 mode);
-            g.FillRectangle(brush, 0, 0, width, height);
+            if (useThreeColors)
+            {
+                brush.InterpolationColors = new ColorBlend
+                {
+                    Positions = new[] { 0f, 0.5f, 1f },
+                    Colors = new[] { Settings.BackgroundColor, Settings.BackgroundColor2, Settings.BackgroundColor3 }
+                };
+            }
+
+            FillBackground(g, brush, rect, Settings.BackgroundCornerRadius, Settings.BackgroundCorners);
         }
+    }
+
+    private static void FillBackground(Graphics g, Brush brush, RectangleF rect, int radius,
+        TotalTimelossBackgroundCorners corners)
+    {
+        if (radius <= 0)
+        {
+            g.FillRectangle(brush, rect);
+            return;
+        }
+
+        SmoothingMode oldSmoothing = g.SmoothingMode;
+        try
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using GraphicsPath path = CreateRoundedRectanglePath(rect, radius, corners);
+            g.FillPath(brush, path);
+        }
+        finally
+        {
+            g.SmoothingMode = oldSmoothing;
+        }
+    }
+
+    private static GraphicsPath CreateRoundedRectanglePath(RectangleF rect, float radius,
+        TotalTimelossBackgroundCorners corners)
+    {
+        GraphicsPath path = new();
+        float diameter = Math.Min(Math.Min(radius * 2f, rect.Width), rect.Height);
+        if (diameter <= 0f)
+        {
+            path.AddRectangle(rect);
+            path.CloseFigure();
+            return path;
+        }
+
+        bool roundTop = corners == TotalTimelossBackgroundCorners.All ||
+                        corners == TotalTimelossBackgroundCorners.Top;
+        bool roundBottom = corners == TotalTimelossBackgroundCorners.All ||
+                           corners == TotalTimelossBackgroundCorners.Bottom;
+
+        path.StartFigure();
+        if (roundTop)
+        {
+            path.AddArc(rect.Left, rect.Top, diameter, diameter, 180f, 90f);
+            path.AddArc(rect.Right - diameter, rect.Top, diameter, diameter, 270f, 90f);
+        }
+        else
+        {
+            path.AddLine(rect.Left, rect.Top, rect.Right, rect.Top);
+        }
+
+        if (roundBottom)
+        {
+            path.AddLine(rect.Right, roundTop ? rect.Top + diameter : rect.Top,
+                rect.Right, rect.Bottom - diameter);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0f, 90f);
+            path.AddArc(rect.Left, rect.Bottom - diameter, diameter, diameter, 90f, 90f);
+        }
+        else
+        {
+            path.AddLine(rect.Right, roundTop ? rect.Top + diameter : rect.Top,
+                rect.Right, rect.Bottom);
+            path.AddLine(rect.Right, rect.Bottom, rect.Left, rect.Bottom);
+            path.AddLine(rect.Left, rect.Bottom,
+                rect.Left, roundTop ? rect.Top + diameter : rect.Top);
+        }
+
+        path.CloseFigure();
+        return path;
     }
 
     private void DrawTextWithEffects(Graphics g, string text, Font font, Color textColor, RectangleF rect, StringFormat format, LiveSplit.Options.LayoutSettings settings)
